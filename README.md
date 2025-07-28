@@ -23,7 +23,7 @@ Store your passwords securely offline — fully encrypted, open-source, and begi
 
 ## 📸 Screenshots
 
-> *(Optional — include only if you upload screenshots to `/assets` folder in your repo)*
+
 
 <img src="assets/screenshot1.png" width="500"/>
 <br>
