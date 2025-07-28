@@ -1,130 +1,77 @@
-import json
-import random
-import string
-import os
-from tkinter import *
-from tkinter import messagebox
-from cryptography.fernet import Fernet
-from PIL import Image, ImageTk
+from fastapi import FastAPI,Cookie,Header,Form,UploadFile,File,HTTPException
+from fastapi.encoders import jsonable_encoder
+from model import Manufacturer,Product,User,Response,oo
+from db import collections
+from bson import ObjectId
 
-# === Key Management ===
-KEY_FILE = "key.key"
-DATA_FILE = "data.json"
 
-def generate_key():
-    key = Fernet.generate_key()
-    with open(KEY_FILE, 'wb') as file:
-        file.write(key)
+app = FastAPI()
 
-def load_key():
-    if not os.path.exists(KEY_FILE):
-        generate_key()
-    with open(KEY_FILE, 'rb') as file:
-        return file.read()
+# @app.post("/add/")
+# async def add_product(product: Product, seller: Seller):
+#     return{"product": product, "seller": seller}
 
-fernet = Fernet(load_key())
 
-# === Password Generator ===
-def generate_password():
-    chars = string.ascii_letters + string.digits + string.punctuation
-    password = ''.join(random.choice(chars) for _ in range(12))
-    password_entry.delete(0, END)
-    password_entry.insert(0, password)
+@app.post('/product')
+def add_product(product: Product):
+    return product
 
-# === Save Credentials ===
-def save_password():
-    website = website_entry.get().strip()
-    email = email_entry.get().strip()
-    password = password_entry.get().strip()
 
-    if not website or not password:
-        messagebox.showwarning("Oops", "Website and Password can't be empty.")
-        return
+@app.post("/user")
+def create_user(user:User):
+    return user
 
-    new_data = {
-        website: {
-            "email": email,
-            "password": fernet.encrypt(password.encode()).decode()
+
+#Read Cookies
+
+@app.get("/read_cookie")
+def read_cookie(session_id: str = Cookie(None)):
+    return {"Session_id" :  session_id}
+
+#Header
+@app.get("/read_header/")
+def read_header(user_agent:str = Header(None)):
+    return {"user_agent":user_agent}
+
+@app.get("/item/",response_model=Response)
+def get_item():
+    return{
+        "User_name": "Hacker",
+        "name":"Laptop",
+        "price": 1000.0 ,
+        "password":"secret@123"
         }
-    }
 
-    try:
-        with open(DATA_FILE, 'r') as file:
-            data = json.load(file)
-    except FileNotFoundError:
-        data = {}
+@app.post("/login",tags=["Login"],description="verify users creds",summary="Login")
+def login(username: str = Form(), password: str = Form()):
+    return{"username": username}
 
-    data.update(new_data)
-
-    with open(DATA_FILE, 'w') as file:
-        json.dump(data, file, indent=4)
-
-    website_entry.delete(0, END)
-    password_entry.delete(0, END)
-    messagebox.showinfo("Success", f"Credentials saved for {website}.")
-
-# === Search Credentials ===
-def find_password():
-    website = website_entry.get().strip()
-    if not website:
-        messagebox.showwarning("Oops", "Please enter a website to search.")
-        return
-
-    try:
-        with open(DATA_FILE, 'r') as file:
-            data = json.load(file)
-    except FileNotFoundError:
-        messagebox.showerror("Error", "No data file found.")
-        return
-
-    if website in data:
-        email = data[website]['email']
-        decrypted_password = fernet.decrypt(data[website]['password'].encode()).decode()
-        messagebox.showinfo(website, f"Email: {email}\nPassword: {decrypted_password}")
-    else:
-        messagebox.showinfo("Not Found", f"No credentials found for {website}.")
-
-# === GUI Setup ===
-window = Tk()
-window.title("Password Manager")
-window.config(padx=50, pady=50,bg="yellow")
+@app.post("/upload")
+def upload(file:UploadFile = File()):
+    return {"filename":file.filename}
 
 
-# === Canvas for Logo ===
-logo_path = "logo.png"
-if os.path.exists(logo_path):
-    logo_image = Image.open(logo_path)
-    logo_image = logo_image.resize((150, 150))  # Resize to fit well
-    logo_img = ImageTk.PhotoImage(logo_image)
-    
-    canvas = Canvas(width=150, height=150, highlightthickness=0)
-    canvas.create_image(75, 75, image=logo_img)
-    canvas.grid(row=0, column=1)
-else:
-    canvas = Canvas(height=100, width=100)
-    canvas.grid(row=0, column=1)
+@app.post("/submit")
+def submit_form(file: UploadFile = File(), name: str = Form()):
+    return {"filename": file.filename, "name":name}
 
-# === Labels ===
-Label(text="Website:",bg="Yellow",fg="Black",).grid(row=1, column=0, sticky=E)
-Label(text="Email/Username:",bg="Yellow").grid(row=2, column=0, sticky=E)
-Label(text="Password:",bg="Yellow").grid(row=3, column=0, sticky=E)
 
-# === Entries ===
-website_entry = Entry(width=21)
-website_entry.grid(row=1, column=1, sticky=W,pady=10)
-website_entry.focus()
+@app.get("/item/{item_id}")
+def read_item(item_id: int):
+    if item_id != 1:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"item_id": item_id}
 
-email_entry = Entry(width=35)
-email_entry.grid(row=2, column=1, columnspan=2, sticky=W,pady=10)
-email_entry.insert(0, "your_email@example.com")
 
-password_entry = Entry(width=21)
-password_entry.grid(row=3, column=1, sticky=W,pady=10)
+@app.get("/item/",tags=["Item"], summary="Get Item",description="This gets an items")
+def get_item():
+    return {"name":"Book"}
 
-# === Buttons ===
-Button(text="Search", width=13, command=find_password).grid(row=1, column=2, sticky=W)
-Button(text="Generate Password", command=generate_password).grid(row=3, column=2, sticky=W)
-Button(text="Add", width=36, command=save_password).grid(row=4, column=1, columnspan=2, pady=10)
 
-# === Start GUI Loop ===
-window.mainloop()
+
+
+
+@app.post("/oo")
+def oo(id:str,item: oo):
+    json_compatible_item = jsonable_encoder(item)
+    return json_compatible_item
