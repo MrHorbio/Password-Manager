@@ -37,7 +37,10 @@ Store your passwords securely offline — fully encrypted, open-source, and begi
 ## 🚀 Getting Started
 
 ### 1. Clone the Repository
-
+```
 git clone [https://github.com/yourusername/password-manager.git](https://github.com/MrHorbio/Password-Manager.git)
+
 cd password-manager
+
 python main.py
+```
